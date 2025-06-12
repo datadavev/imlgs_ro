@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="generator" content="Observable Framework v1.13.3">
+<title>IMLGS</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,200..900;1,8..60,200..900&amp;display=swap" crossorigin>
+<link rel="preload" as="style" href="./_observablehq/theme-air,near-midnight.dcdbf18e.css">
+<link rel="preload" as="style" href="./_observablehq/stdlib/inputs.ea9fd553.css">
+<link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,200..900;1,8..60,200..900&amp;display=swap" crossorigin>
+<link rel="stylesheet" type="text/css" href="./_observablehq/theme-air,near-midnight.dcdbf18e.css">
+<link rel="stylesheet" type="text/css" href="./_observablehq/stdlib/inputs.ea9fd553.css">
+<link rel="modulepreload" href="./_observablehq/client.a43b0b69.js">
+<link rel="modulepreload" href="./_observablehq/runtime.e080113b.js">
+<link rel="modulepreload" href="./_observablehq/stdlib.55124be9.js">
+<link rel="modulepreload" href="./_observablehq/stdlib/duckdb.9cf34035.js">
+<link rel="modulepreload" href="./_observablehq/stdlib/inputs.c9657b20.js">
+<link rel="modulepreload" href="./_npm/@duckdb/duckdb-wasm@1.29.0/36014af5.js">
+<link rel="modulepreload" href="./_npm/htl@0.3.1/72f4716c.js">
+<link rel="modulepreload" href="./_npm/isoformat@0.2.1/18cbf477.js">
+<link rel="modulepreload" href="./_npm/apache-arrow@19.0.1/42e4d6a9.js">
+<link rel="modulepreload" href="./_npm/tslib@2.8.1/b62a9c4a.js">
+<link rel="modulepreload" href="./_npm/flatbuffers@24.12.23/ff64aefa.js">
+<link rel="icon" href="./_file/observable.1af93621.png" type="image/png" sizes="32x32">
+<script type="module">
+
+import {define} from "./_observablehq/client.a43b0b69.js";
+
+define({id: "2200ef31", inputs: ["DuckDBClient"], outputs: ["source_table","pq_source","db"], body: async (DuckDBClient) => {
+const source_table = "imlgs";
+const pq_source = "https://s3.beehivebeach.com/imlgs/imlgs_full.parquet";
+const db = await DuckDBClient.of();
+//const ddbversion = await db.queryRow("select version() as version");
+await db.query(`create view ${source_table} as select * from read_parquet('${pq_source}')`);
+return {source_table,pq_source,db};
+}});
+
+define({id: "bfa9b1ea", outputs: ["display_fields"], body: () => {
+const display_fields = [
+    "imlgs",
+    "platform",
+    "device",
+    "facility.facility_code as repository",
+    "lat",
+    "lon"
+];
+
+return {display_fields};
+}});
+
+define({id: "63300ebf", inputs: ["Inputs","display","Generators","Mutable","source_table","db"], outputs: ["where_clause_join","the_inputs","_platform_input","_device_input","_repository_input","platform_input","device_input","repository_input","getIdFromURL","selectedRecordJson","setSelectedRecordJson","updateSelectedRecordJson"], body: (Inputs,display,Generators,Mutable,source_table,db) => {
+const where_clause_join = " AND ";
+
+const the_inputs = [];
+
+const _platform_input = Inputs.text({
+        label:"Platform",
+        submit: true}
+    );
+display(_platform_input);
+
+const _device_input = Inputs.text({
+        label:"Device",
+        submit: true}
+    );
+display(_device_input);
+
+const _repository_input = Inputs.text({
+        label:"Repository",
+        submit: true}
+    );
+display(_repository_input);
+
+const platform_input = Generators.observe((notify) => {
+    const inputted = () => notify({"v":_platform_input.value, "c": "regexp_matches(platform,?,'i')"});
+    inputted();
+    _platform_input.addEventListener("input", inputted);
+    return () => _platform_input.removeEventListener("input", inputted);
+})
+
+const device_input = Generators.observe((notify) => {
+    const inputted = () => notify({"v":_device_input.value, "c": "regexp_matches(device,?,'i')"});
+    inputted();
+    _device_input.addEventListener("input", inputted);
+    return () => _device_input.removeEventListener("input", inputted);
+})
+
+const repository_input = Generators.observe((notify) => {
+    const inputted = () => notify({"v":_repository_input.value, "c": "regexp_matches(facility.facility_code ,?,'i')"});
+    inputted();
+    _repository_input.addEventListener("input", inputted);
+    return () => _repository_input.removeEventListener("input", inputted);
+})
+
+function getIdFromURL() {
+    const hash = window.location.hash;
+    if (hash.length > 0) {
+        return hash.slice(1);
+    }
+    return null;
+}
+
+const selectedRecordJson = Mutable("");
+
+const setSelectedRecordJson =  (v) => {
+    if (!v) {
+        selectedRecordJson.value = "";
+        return;
+    }
+    selectedRecordJson.value = v;
+}
+
+async function updateSelectedRecordJson(pid) {
+    if (!pid) {
+        setSelectedRecordJson("");
+        return;
+    }
+    const query = `select * from ${source_table} where imlgs=?`;
+    const res = await db.queryRow(query, [pid]);
+    setSelectedRecordJson(JSON.stringify(res, null, 2));
+}
+
+return {where_clause_join,the_inputs,_platform_input,_device_input,_repository_input,platform_input,device_input,repository_input,getIdFromURL,selectedRecordJson,setSelectedRecordJson,updateSelectedRecordJson};
+}});
+
+define({id: "287ec876", inputs: ["Mutable"], outputs: ["_where_clause","update_where_clauses"], body: (Mutable) => {
+const _where_clause = Mutable({
+    clause: "",
+    params: []
+});
+
+const update_where_clauses = (c, v) => {
+    console.log(`update_where_clauses: ${c}`);
+    _where_clause.value = {
+        clause: c,
+        params: v
+    };
+}
+
+return {_where_clause,update_where_clauses};
+}});
+
+define({id: "ab7b2e71", inputs: ["where_clause_join","display_fields","source_table","db","platform_input","device_input","repository_input","view","Inputs","updateSelectedRecordJson","getIdFromURL"], outputs: ["getWhereClause","getMatchingRecords","getMatchingCount","inputs","theRecords","recordCount","table"], body: (where_clause_join,display_fields,source_table,db,platform_input,device_input,repository_input,view,Inputs,updateSelectedRecordJson,getIdFromURL) => {
+//set_where_clause(the_inputs)
+
+
+function getWhereClause(inputs) {
+    const params = [];
+    let where_clause = "";
+    if (inputs.length > 0) {
+        const clauses = [];
+        for (const inp of inputs) {
+            if (inp.v) {
+                clauses.push(inp.c);
+                params.push(inp.v);
+            }
+        }
+        if (params.length > 0){
+            where_clause += ` WHERE ${clauses.join(where_clause_join)}`;
+        }
+    }
+    return {"params":params, "clause":where_clause};
+}
+
+
+async function getMatchingRecords(inputs) {
+    let query = `SELECT ${display_fields.join(',')} FROM ${source_table}`;
+    const wc = getWhereClause(inputs);
+    query = query + wc.clause;
+    console.log(query);
+    return db.query(query, wc.params);
+}
+
+async function getMatchingCount(inputs) {
+    let query = `SELECT count(*) AS n FROM ${source_table}`;
+    const wc = getWhereClause(inputs);
+    query = query + wc.clause;
+    console.log(query);
+    const result = await db.queryRow(query, wc.params);
+    return result.n;
+}
+
+const inputs = [platform_input, device_input, repository_input]
+let theRecords = getMatchingRecords(inputs);
+let recordCount = getMatchingCount(inputs);
+
+const table = view(Inputs.table(theRecords));
+
+updateSelectedRecordJson(getIdFromURL());
+return {getWhereClause,getMatchingRecords,getMatchingCount,inputs,theRecords,recordCount,table};
+}});
+
+define({id: "468f5ee7", mode: "inline", inputs: ["recordCount","display"], body: async (recordCount,display) => {
+display(await(
+recordCount
+))
+}});
+
+define({id: "9f8e647a", mode: "inline", inputs: ["selectedRecordJson","display"], body: async (selectedRecordJson,display) => {
+display(await(
+selectedRecordJson
+))
+}});
+
+</script>
+</head>
+<body>
+<input id="observablehq-sidebar-toggle" type="checkbox" title="Toggle sidebar">
+<label id="observablehq-sidebar-backdrop" for="observablehq-sidebar-toggle"></label>
+<nav id="observablehq-sidebar">
+  <ol>
+    <label id="observablehq-sidebar-close" for="observablehq-sidebar-toggle"></label>
+    <li class="observablehq-link observablehq-link-active"><a href="./">IMLGS</a></li>
+  </ol>
+  <ol>
+    <li class="observablehq-link"><a href="./facet_test_1">Facet test</a></li>
+    <li class="observablehq-link"><a href="./openlayers">IMLGS Map</a></li>
+  </ol>
+</nav>
+<script>{const e=document.querySelector("#observablehq-sidebar"),o=document.querySelector("#observablehq-sidebar-toggle"),r=sessionStorage.getItem("observablehq-sidebar");r?o.checked=r==="true":o.indeterminate=!0;for(const t of document.querySelectorAll("#observablehq-sidebar summary")){const s=t.parentElement;switch(sessionStorage.getItem(`observablehq-sidebar:${t.textContent}`)){case"true":s.open=!0;break;case"false":s.classList.contains("observablehq-section-active")||(s.open=!1);break}}addEventListener("beforeunload",()=>sessionStorage.setItem("observablehq-sidebar-scrolly",`${e.scrollTop}`));const a=sessionStorage.getItem("observablehq-sidebar-scrolly");a!=null&&(e.style.cssText="overflow: hidden;",e.scrollTop=+a,e.style.cssText="");}</script>
+<div id="observablehq-center">
+<aside id="observablehq-toc" data-selector="h1:not(:first-of-type)[id], h2:first-child[id], :not(h1) + h2[id]">
+<nav>
+</nav>
+</aside>
+<main id="observablehq-main" class="observablehq">
+<h1 id="imlgs" tabindex="-1"><a class="observablehq-header-anchor" href="#imlgs">IMLGS</a></h1>
+<div class="observablehq observablehq--block"><!--:2200ef31:--></div>
+<div class="observablehq observablehq--block"><!--:bfa9b1ea:--></div>
+<div class="observablehq observablehq--block"><!--:63300ebf:--></div>
+<div class="observablehq observablehq--block"><!--:287ec876:--></div>
+<div class="observablehq observablehq--block"><!--:ab7b2e71:--></div>
+<p>Matching: <observablehq-loading></observablehq-loading><!--:468f5ee7:--></p>
+<pre><observablehq-loading></observablehq-loading><!--:9f8e647a:-->
+</pre>
+</main>
+<footer id="observablehq-footer">
+<nav><a rel="next" href="./facet_test_1"><span>Facet test</span></a></nav>
+<div>Built with <a href="https://observablehq.com/" target="_blank" rel="noopener noreferrer">Observable</a> on <a title="2025-06-12T14:14:08">Jun 12, 2025</a>.</div>
+</footer>
+</div>
+</body>
+</html>

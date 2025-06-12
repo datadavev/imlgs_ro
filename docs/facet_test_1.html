@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="generator" content="Observable Framework v1.13.3">
+<title>Facet test | IMLGS</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,200..900;1,8..60,200..900&amp;display=swap" crossorigin>
+<link rel="preload" as="style" href="./_observablehq/theme-air,near-midnight.dcdbf18e.css">
+<link rel="preload" as="style" href="./_observablehq/stdlib/inputs.ea9fd553.css">
+<link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,200..900;1,8..60,200..900&amp;display=swap" crossorigin>
+<link rel="stylesheet" type="text/css" href="./_observablehq/theme-air,near-midnight.dcdbf18e.css">
+<link rel="stylesheet" type="text/css" href="./_observablehq/stdlib/inputs.ea9fd553.css">
+<link rel="modulepreload" href="./_observablehq/client.a43b0b69.js">
+<link rel="modulepreload" href="./_observablehq/runtime.e080113b.js">
+<link rel="modulepreload" href="./_observablehq/stdlib.55124be9.js">
+<link rel="modulepreload" href="./_observablehq/stdlib/inputs.c9657b20.js">
+<link rel="modulepreload" href="./_npm/htl@0.3.1/72f4716c.js">
+<link rel="modulepreload" href="./_npm/isoformat@0.2.1/18cbf477.js">
+<link rel="icon" href="./_file/observable.1af93621.png" type="image/png" sizes="32x32">
+<script type="module">
+
+import {define} from "./_observablehq/client.a43b0b69.js";
+
+define({id: "05274091", inputs: ["Mutable","Inputs","view"], outputs: ["getData","initial_data","mutable_data","set_data","updater"], body: (Mutable,Inputs,view) => {
+function getData() {
+    console.log("getData");
+    const res = [];
+    const n = 1 + Math.round(Math.random() * 10);
+    for (let i=0; i < n; i++) {
+        res.push(Math.random()*100);
+    }
+    return res;
+}
+
+const initial_data = getData();
+const mutable_data = Mutable(initial_data);
+const set_data = (v) => {
+    mutable_data.value = [...v];
+}
+
+const updater = Inputs.button("Update...", {
+    value: null,
+    reduce: () => {
+        set_data(getData());
+    }
+});
+
+view(updater);
+return {getData,initial_data,mutable_data,set_data,updater};
+}});
+
+define({id: "4fc25e0e", inputs: ["Inputs","mutable_data","view"], outputs: ["select1"], body: (Inputs,mutable_data,view) => {
+const select1 = Inputs.select(mutable_data, {label: "Random..."});
+view(select1);
+return {select1};
+}});
+
+define({id: "53bb9e72", inputs: ["Inputs","Mutable","getData"], outputs: ["FacetValues","d2"], body: (Inputs,Mutable,getData) => {
+class FacetValues extends Array {
+    constructor() {
+        super();
+        Object.defineProperties(this, {
+            _list: {value: [], writable: true}
+        });
+    }
+
+    get value() {
+        return this;
+    }
+
+    set value(value) {
+        console.log("FacetValues.set");
+        this.length = 0;
+        for (const v of value) {
+            this.push(v);
+        }
+        this.dispatchEvent(new CustomEvent("input", {detail: this}));
+    }
+
+    addEventListener(type, listener) {
+        console.log("FacetValues.addEventListener");
+        if (type != "input" || this._list.includes(listener)) return;
+        this._list = [listener].concat(this._list);
+    }
+
+    removeEventListener(type, listener) {
+        console.log("FacetValues.removeEventListener");
+        if (type != "input") return;
+        this._list = this._list.filter(l => l !== listener);
+    }
+
+    dispatchEvent(event) {
+        console.log("FacetValues.dispatchEvent");
+        const p = Promise.resolve(event);
+        this._list.forEach(l => p.then(l));
+    }
+
+    bind(input, invalidation) {
+        console.log("FacetValues.bind");
+        return Inputs.bind(input, this, invalidation);
+    }
+}
+
+const d2 = Mutable(new FacetValues(), {change:getData});
+d2.value = getData();
+console.log(`isArray? ${Array.isArray(d2)}`);
+return {FacetValues,d2};
+}});
+
+define({id: "ef0a31fa", inputs: ["Inputs","d2","getData","view"], outputs: ["updater2","select2"], body: (Inputs,d2,getData,view) => {
+const updater2 = Inputs.button("Update 2", {
+    value: null,
+    reduce: () => {d2.value = getData()}
+});
+view(updater2);
+
+//const d2o = observe(d2);
+
+const select2 = Inputs.select(d2, {label: "Random..."});
+view(select2);
+
+return {updater2,select2};
+}});
+
+define({id: "82f5c40d", mode: "inline", inputs: ["d2","display"], body: async (d2,display) => {
+display(await(
+d2.value
+))
+}});
+
+</script>
+</head>
+<body>
+<input id="observablehq-sidebar-toggle" type="checkbox" title="Toggle sidebar">
+<label id="observablehq-sidebar-backdrop" for="observablehq-sidebar-toggle"></label>
+<nav id="observablehq-sidebar">
+  <ol>
+    <label id="observablehq-sidebar-close" for="observablehq-sidebar-toggle"></label>
+    <li class="observablehq-link"><a href="./">IMLGS</a></li>
+  </ol>
+  <ol>
+    <li class="observablehq-link observablehq-link-active"><a href="./facet_test_1">Facet test</a></li>
+    <li class="observablehq-link"><a href="./openlayers">IMLGS Map</a></li>
+  </ol>
+</nav>
+<script>{const e=document.querySelector("#observablehq-sidebar"),o=document.querySelector("#observablehq-sidebar-toggle"),r=sessionStorage.getItem("observablehq-sidebar");r?o.checked=r==="true":o.indeterminate=!0;for(const t of document.querySelectorAll("#observablehq-sidebar summary")){const s=t.parentElement;switch(sessionStorage.getItem(`observablehq-sidebar:${t.textContent}`)){case"true":s.open=!0;break;case"false":s.classList.contains("observablehq-section-active")||(s.open=!1);break}}addEventListener("beforeunload",()=>sessionStorage.setItem("observablehq-sidebar-scrolly",`${e.scrollTop}`));const a=sessionStorage.getItem("observablehq-sidebar-scrolly");a!=null&&(e.style.cssText="overflow: hidden;",e.scrollTop=+a,e.style.cssText="");}</script>
+<div id="observablehq-center">
+<aside id="observablehq-toc" data-selector="h1:not(:first-of-type)[id], h2:first-child[id], :not(h1) + h2[id]">
+<nav>
+</nav>
+</aside>
+<main id="observablehq-main" class="observablehq">
+<h1 id="facet-test" tabindex="-1"><a class="observablehq-header-anchor" href="#facet-test">Facet test</a></h1>
+<p>Update a select option set.</p>
+<div class="observablehq observablehq--block"><!--:05274091:--></div>
+<p>This works, using a top level Mutable:</p>
+<div class="observablehq observablehq--block"><!--:4fc25e0e:--></div>
+<div class="observablehq observablehq--block"><!--:53bb9e72:--></div>
+<p>This doesn't work, when the mutated value is an element of an object:</p>
+<div class="observablehq observablehq--block"><!--:ef0a31fa:--></div>
+<p><observablehq-loading></observablehq-loading><!--:82f5c40d:--></p>
+</main>
+<footer id="observablehq-footer">
+<nav><a rel="prev" href="./"><span>IMLGS</span></a><a rel="next" href="./openlayers"><span>IMLGS Map</span></a></nav>
+<div>Built with <a href="https://observablehq.com/" target="_blank" rel="noopener noreferrer">Observable</a> on <a title="2025-06-12T14:14:08">Jun 12, 2025</a>.</div>
+</footer>
+</div>
+</body>
+</html>
