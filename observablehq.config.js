@@ -1,4 +1,7 @@
 // See https://observablehq.com/framework/config for documentation.
+import MarkdownItFootnote from "markdown-it-footnote";
+import MarkdownItGitHubAlerts from "markdown-it-github-alerts";
+
 export default {
   // The app’s title; used in the sidebar and webpage titles.
   title: "IMLGS",
@@ -21,6 +24,8 @@ export default {
 
   // The path to the source root.
   root: "src",
+
+  markdownIt: (md) =>   md.use(MarkdownItFootnote, MarkdownItGitHubAlerts),
 
   // Some additional configuration options and their defaults:
   // theme: "default", // try "light", "dark", "slate", etc.

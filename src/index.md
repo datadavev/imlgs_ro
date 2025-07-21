@@ -1,13 +1,10 @@
 # IMLGS
-```js
-const source_table = "imlgs";
-const pq_source = "https://s3.beehivebeach.com/imlgs/imlgs_full.parquet";
-const db = await DuckDBClient.of();
-//const ddbversion = await db.queryRow("select version() as version");
-await db.query(`create view ${source_table} as select * from read_parquet('${pq_source}')`);
-```
+
+Note: This is a work in progress and likely to change.
 
 ```js
+import {IMLGSData, newInputObserver, getIdFromURL} from "./lib/common.js";
+
 const display_fields = [
     "imlgs",
     "platform",
@@ -17,59 +14,26 @@ const display_fields = [
     "lon"
 ];
 
+const pq_source = "https://s3.beehivebeach.com/imlgs/imlgs_full.parquet";
+const imlgs_data = new IMLGSData(pq_source, "imlgs", display_fields);
+await imlgs_data.initialize()
 ```
 
+
 ```js
-const where_clause_join = " AND ";
+const [_platform_input, platform_input] = await imlgs_data.newInputObserver(
+    "platform", "Platform", "regexp_matches(platform,?,'i')"
+);
+const [_device_input, device_input] = await imlgs_data.newInputObserver(
+    "device", "Device", "regexp_matches(device,?,'i')"
+);
+const [_repository_input, repository_input] = await imlgs_data.newInputObserver(
+    "facility.facility_code", "Repository", "regexp_matches(facility.facility_code ,?,'i')"
+);
 
-const the_inputs = [];
-
-const _platform_input = Inputs.text({
-        label:"Platform",
-        submit: true}
-    );
 display(_platform_input);
-
-const _device_input = Inputs.text({
-        label:"Device",
-        submit: true}
-    );
 display(_device_input);
-
-const _repository_input = Inputs.text({
-        label:"Repository",
-        submit: true}
-    );
 display(_repository_input);
-
-const platform_input = Generators.observe((notify) => {
-    const inputted = () => notify({"v":_platform_input.value, "c": "regexp_matches(platform,?,'i')"});
-    inputted();
-    _platform_input.addEventListener("input", inputted);
-    return () => _platform_input.removeEventListener("input", inputted);
-})
-
-const device_input = Generators.observe((notify) => {
-    const inputted = () => notify({"v":_device_input.value, "c": "regexp_matches(device,?,'i')"});
-    inputted();
-    _device_input.addEventListener("input", inputted);
-    return () => _device_input.removeEventListener("input", inputted);
-})
-
-const repository_input = Generators.observe((notify) => {
-    const inputted = () => notify({"v":_repository_input.value, "c": "regexp_matches(facility.facility_code ,?,'i')"});
-    inputted();
-    _repository_input.addEventListener("input", inputted);
-    return () => _repository_input.removeEventListener("input", inputted);
-})
-
-function getIdFromURL() {
-    const hash = window.location.hash;
-    if (hash.length > 0) {
-        return hash.slice(1);
-    }
-    return null;
-}
 
 const selectedRecordJson = Mutable("");
 
@@ -86,81 +50,66 @@ async function updateSelectedRecordJson(pid) {
         setSelectedRecordJson("");
         return;
     }
-    const query = `select * from ${source_table} where imlgs=?`;
-    const res = await db.queryRow(query, [pid]);
+    const query = `select * from ${imlgs_data.tbl} where imlgs=?`;
+    const res = await imlgs_data.db.queryRow(query, [pid]);
     setSelectedRecordJson(JSON.stringify(res, null, 2));
 }
-
 ```
 
 ```js
+// This doesn't work
+//import {ui_inputs as uii} from "./lib/common.js";
 
-const _where_clause = Mutable({
-    clause: "",
-    params: []
-});
-
-const update_where_clauses = (c, v) => {
-    console.log(`update_where_clauses: ${c}`);
-    _where_clause.value = {
-        clause: c,
-        params: v
-    };
-}
-
-```
-
-```js
-//set_where_clause(the_inputs)
-
-
-function getWhereClause(inputs) {
-    const params = [];
-    let where_clause = "";
-    if (inputs.length > 0) {
-        const clauses = [];
-        for (const inp of inputs) {
-            if (inp.v) {
-                clauses.push(inp.c);
-                params.push(inp.v);
-            }
-        }
-        if (params.length > 0){
-            where_clause += ` WHERE ${clauses.join(where_clause_join)}`;
-        }
-    }
-    return {"params":params, "clause":where_clause};
-}
-
+// this does
+const ui_inputs = [];
 
 async function getMatchingRecords(inputs) {
-    let query = `SELECT ${display_fields.join(',')} FROM ${source_table}`;
-    const wc = getWhereClause(inputs);
-    query = query + wc.clause;
-    console.log(query);
-    return db.query(query, wc.params);
+    const wc = imlgs_data.getWhereClause(inputs);
+    return imlgs_data.getDisplayRecords(wc);
 }
 
 async function getMatchingCount(inputs) {
-    let query = `SELECT count(*) AS n FROM ${source_table}`;
-    const wc = getWhereClause(inputs);
-    query = query + wc.clause;
-    console.log(query);
-    const result = await db.queryRow(query, wc.params);
-    return result.n;
+    const wc = imlgs_data.getWhereClause(inputs);
+    return imlgs_data.count(wc);
 }
 
-const inputs = [platform_input, device_input, repository_input]
-let theRecords = getMatchingRecords(inputs);
-let recordCount = getMatchingCount(inputs);
+ui_inputs.push(platform_input);
+ui_inputs.push(device_input)
+ui_inputs.push(repository_input);
 
-const table = view(Inputs.table(theRecords));
+//const inputs = [platform_input, device_input, repository_input]
+let theRecords = getMatchingRecords(ui_inputs);
+let recordCount = getMatchingCount(ui_inputs);
+
+const tableview = view(Inputs.table(theRecords, {
+    multiple: false,
+    required: false
+}));
 
 updateSelectedRecordJson(getIdFromURL());
+
+//${tableview?tableview.imlgs:''}
+
 ```
 
 Matching: ${recordCount}
 
+
 <pre>
 ${selectedRecordJson}
 </pre>
+
+
+```js
+import * as d3 from "npm:d3";
+
+async function getPlotData(inputs) {
+    const subset = recordCount > 10000? " using sample 10%" : "";
+    let query = `SELECT platform, device, facility.facility_code as repository FROM ${imlgs_data.tbl}`;
+    const where_clause = imlgs_data.getWhereClause(inputs);
+    query = query + where_clause.clause + subset;
+    return await imlgs_data.db.query(query, where_clause.params);
+}
+
+//const plot_data = getPlotData(ui_inputs);
+```

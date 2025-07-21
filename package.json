@@ -11,7 +11,10 @@
   "dependencies": {
     "@duckdb/duckdb-wasm": "^1.29.1-dev132.0",
     "@observablehq/framework": "^1.13.3",
-    "ol": "^10.5.0"
+    "markdown-it-footnote": "^4.0.0",
+    "markdown-it-github-alerts": "^1.0.0",
+    "ol": "^10.5.0",
+    "ol-ext": "^4.0.32"
   },
   "devDependencies": {
     "rimraf": "^5.0.5"
