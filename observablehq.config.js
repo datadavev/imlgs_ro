@@ -40,7 +40,7 @@ export default {
   // typographer: false, // smart quotes and other typographic improvements
   // preserveExtension: false, // drop .html from URLs
   // preserveIndex: false, // drop /index from URLs
-  output: "docs",
+  output: "dist",
   duckdb: {
     extensions: {
       spatial: {
