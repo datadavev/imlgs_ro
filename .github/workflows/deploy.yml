@@ -3,6 +3,8 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
+  pages: write
+  id-token: write
 jobs:
   build:
     concurrency: ci-${{ github.ref }}
