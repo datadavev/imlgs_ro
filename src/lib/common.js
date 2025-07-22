@@ -261,7 +261,9 @@ export class IMLGSData {
             "province",
             "lake",
             "leg",
-            "sample_comments"
+            "sample_comments",
+            "ST_AsText(geometry) as geometry",
+            "begin_jd"
         ];
         const query = `SELECT ${columns.join(',')} FROM imlgs WHERE imlgs=?`;
         const record = await this.ddb.queryRow(query, [pid]);
