@@ -4,6 +4,7 @@
 import {DuckDBClient} from "npm:@observablehq/duckdb";
 import * as Inputs from "npm:@observablehq/inputs";
 import {Generators} from "observablehq:stdlib";
+import {html} from "npm:htl";
 
 const DEFAULT_DISPLAY_FIELDS = [
     "imlgs",
@@ -363,3 +364,83 @@ export class IMLGSData {
         return [inputer, res];
 }
 }
+
+//-----
+// From: https://github.com/stevebest/julian/blob/master/index.js
+
+const DAY = 86400000;
+const UNIX_EPOCH_JULIAN_DATE = 2440587.5;
+
+function convertToDate(julian) {
+  return new Date((Number(julian) - UNIX_EPOCH_JULIAN_DATE) * DAY);
+};
+//---------
+
+export function jdToDate(jd) {
+    if (jd) {
+        const d = convertToDate(jd);
+        const year = new Intl.DateTimeFormat('en', { year: 'numeric' }).format(d);
+        const month = new Intl.DateTimeFormat('en', { month: '2-digit' }).format(d);
+        const day = new Intl.DateTimeFormat('en', { day: '2-digit' }).format(d);
+        return `${year}-${month}-${day}`;
+    }
+    return jd;
+}
+
+function formatDict(d) {
+    if (!d) {
+        return "";
+    }
+    if (typeof d === 'object') {
+        const entries = [];
+        for (const [k, v] of Object.entries(d)) {
+            entries.push(`${k}: ${v}`);
+        }
+        return entries.join("<br />")
+    };
+    return d;
+}
+
+export function intervalComment(interval) {
+    console.log(interval)
+    const c = [formatDict(interval.int_comments)];
+    if (interval.description) {
+        c.push(formatDict(interval.description));
+    }
+    if (interval.remarks) {
+        c.push(formatDict(interval.remarks))
+    }
+    return c.join("; ");
+}
+
+
+/** WIP - from https://observablehq.com/@tophtucker/custom-table-click-to-select-row
+ * Need to update this to work in Framework.
+export function CTable(data, keys = Object.keys(data[0])) {
+  const onclick = (e, row) => {
+    for (const row of node.querySelectorAll("tbody tr")) row.style.background = "none";
+    e.currentTarget.style.background = "#eee";
+    set(node, row);
+  };
+  const node = html`<div style="max-height: 500px; overflow-y: auto;">
+    <table style="margin: 0; border-collapse: separate; border-spacing: 0;">
+      <thead>
+        <tr style="border-bottom: none;">
+          ${keys.map(key => html`<th style="position: sticky; top: 0; border-bottom: solid 1px #ccc; background: #fff;">
+            ${key}
+          </th>`)}
+        </tr>
+      </thead>
+      <tbody>
+        ${data.map(row => html`<tr onclick=${(e) => onclick(e, row)}>
+          ${keys.map(key => html`<td style="border-bottom: solid 1px #eee;">
+            ${row[key]}
+          </td>`)}
+        </tr>`)}
+      </tbody>
+    </table>
+  </div>`;
+  set(node, null);
+  return node;
+}
+*/
