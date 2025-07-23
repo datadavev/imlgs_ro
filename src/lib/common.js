@@ -52,7 +52,7 @@ export async function addJSONLD(pid, jld_data) {
         soele.setAttribute("id", pid);
     }
     soele.text = JSON.stringify(jld_data, null, 2);
-    console.log(soele.text);
+    //console.log(soele.text);
     if (create_new) {
         document.querySelector("head").appendChild(soele);
     }
@@ -183,7 +183,7 @@ export class IMLGSData {
                 where_clause += ` WHERE ${clauses.join(this.where_clause_join)}`;
             }
         }
-        console.log(`getWhereClause: ${where_clause}`);
+        //console.log(`getWhereClause: ${where_clause}`);
         return new WhereClause(where_clause, params);
     }    
 
@@ -235,6 +235,17 @@ export class IMLGSData {
         let query = `SELECT ${this.display_fields.join(',')} FROM ${this.data_view}`;
         query = query + where_clause.clause;
         return this.ddb.query(query, where_clause.params);
+    }
+
+    /**
+     * Perform a general regexp search across a few common fields.
+     * @param {*} term 
+     */
+    async search(term){
+        const query = `SELECT ${this.display_fields.join(',')} FROM ${this.data_view} WHERE 
+        regexp_matches(imlgs ,?,'i') OR regexp_matches(sample,?,'i') OR regexp_matches(igsn,?,'i')
+        OR regexp_matches(description,?,'i')`;
+        return this.db.query(query, [term, term, term, term]);
     }
 
     /**
@@ -402,7 +413,7 @@ function formatDict(d) {
 }
 
 export function intervalComment(interval) {
-    console.log(interval)
+    //console.log(interval)
     const c = [formatDict(interval.int_comments)];
     if (interval.description) {
         c.push(formatDict(interval.description));

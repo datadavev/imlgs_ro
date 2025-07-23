@@ -105,18 +105,27 @@ let recordCount = getMatchingCount(ui_inputs);
 ```
 
 ```js
+function doRowClicked(e) {
+    const tr = e.target.closest('tr');
+    tr.querySelector('input').click();
+}
+
 const dataTable = Inputs.table(theRecords, {
     multiple: false,
     required: false,
     select: true,
-    value: theRecords.get(0)
+    format: {
+        imlgs: (v) => {return html`<span onclick=${doRowClicked}>${v}</span>`}
+    }
 });
 
 const tableview = view(dataTable);
 
+dataTable.querySelector('input[value="0"]').click();
 ```
 
 Matching: ${recordCount}
+
 
 
 ```js
