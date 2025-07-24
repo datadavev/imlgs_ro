@@ -54,5 +54,6 @@ export default {
         load: true
       }
     }
-  }  
+  },
+  pager: false
 };

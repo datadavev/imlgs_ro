@@ -82,6 +82,21 @@ export function newInputObserver(inputer, template) {
 }
 
 
+export function newTextInputObserver(inputer, template) {
+    const res = Generators.observe((notify) => {
+        const inputted = () => {
+            notify({"v":inputer.value, "c": template});
+        };
+        inputted();
+        inputer.addEventListener("input", inputted);
+        return () => inputer.removeEventListener("input", inputted);
+    });
+    ui_inputs.push(res);
+    return res;
+}
+
+
+
 export class Facet {
     constructor(name, field, options={}) {
         this.name = name;
@@ -152,7 +167,7 @@ export class IMLGSData {
         this.display_fields = display_fields ? display_fields : DEFAULT_DISPLAY_FIELDS;
         this.where_clause_join = " AND ";
         this.ddb = null;
-        this.MAX_DISTINCT = max_distinct || 5000;
+        this.MAX_DISTINCT = max_distinct || 7000;
     }
 
     async initialize() {
@@ -314,12 +329,13 @@ export class IMLGSData {
         if (nvalues < this.MAX_DISTINCT) {
             const rows = await this.distinctCounts(column, NULL_WHERE_CLAUSE)
             for (const v of rows) {
-                datalist.push(`${v.d} (${v.n})`);
+                //datalist.push(`${v.d} (${v.n})`);
+                datalist.push(`${v.d}`);
             }
         }
         return Inputs.text({
             label: `${label} (${nvalues})`,
-            submit: true,
+            submit: false,
             datalist: datalist,
             autocomplete:"off"
         }            
@@ -373,7 +389,32 @@ export class IMLGSData {
         });
         ui_inputs.push(res);
         return [inputer, res];
-}
+    }
+
+    /**
+     * Adds an observer to an input and yield a custom value, in this 
+     * case, the input value and a template string associated with the input.
+     * 
+     * This is used to generate an SQL where clause for the input value
+     * @param {*} inputer 
+     * @param {*} template 
+     * @returns 
+     */
+    async newTextInputObserver(column, label, template) {
+        //const inputer = await this.newTextInput(column, label);
+        const inputer = await this.newTextInput(column, label);
+        const res = Generators.observe((notify) => {
+            const inputted = () => {
+                notify({"v":inputer.value, "c": template});
+            };
+            inputted();
+            inputer.addEventListener("input", inputted);
+            return () => inputer.removeEventListener("input", inputted);
+        });
+        ui_inputs.push(res);
+        return [inputer, res];
+    }
+
 }
 
 //-----
