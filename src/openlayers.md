@@ -68,7 +68,7 @@ async function setupDatasource(src, src_table) {
 }
 
 const source_table = "imlgs";
-const datasource = "https://s3.beehivebeach.com/imlgs/imlgs_full.parquet"
+const datasource = "https://s3.beehivebeach.com/imlgs/imlgs_full_2.parquet"
 const imlgsdb = await setupDatasource(datasource, source_table);
 
 async function listColumns(db, table) {
