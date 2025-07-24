@@ -55,5 +55,6 @@ export default {
       }
     }
   },
-  pager: false
+  pager: false,
+  toc: false
 };
