@@ -1,10 +1,23 @@
 ---
-title: IMLGS Map
+title: IMLGS Spatial
 theme: dashboard
 sidebar: collapse
 ---
 
-# IMLGS
+<h1 style="max-width:100%">Index to Marine and Lacustrine Geological Samples</h1>
+
+<details>
+    <summary>About</summary>
+<div class="grid grid-cols-2">
+<div class="note">This site provides a read-only view of a snaptot of the 
+<a href='https://www.ncei.noaa.gov/products/index-marine-lacustrine-samples'>Index to Marine and Lacustrine Geological Samples</a>
+retrieved immediately prior to site deomissioning on 2025-05-05.</div>
+<div class="warning">This is a development site and not the final location of this resource. Links to this site and its content are likely
+to break as content evolves.</div>
+</div>
+</div>
+</details>
+
 
 <link rel=stylesheet href="https://cdn.jsdelivr.net/npm/ol@v10.5.0/ol.css" />
 <style>
