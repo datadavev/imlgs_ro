@@ -23,7 +23,7 @@ to break as content evolves.</div>
 <style>
     .map {
         width: 100%;
-        height: 800px; 
+        height: 600px; 
         position: relative;
     }
     .map:-webkit-full-screen {
@@ -123,6 +123,14 @@ async function updateSelectedRecordJson(pid) {
 Matching: ${recordCount}
 </div>
 </div>
+
+```js
+const selected_feature = Mutable("");
+const setSelectedFeature = (pid) => {
+    selected_feature.value = pid;
+    window.location.hash = pid;
+}
+```
 
 ```js
 const ui_inputs = [];
@@ -351,14 +359,7 @@ async function loadParquetLayer(db, inputs) {
         "platform", 
         "begin_jd"
     ];
-    const where_clause = db.getWhereClause(inputs)
-    //let _where = " where geometry is not null";
-    //if (where_clause !== "") {
-    //    _where = _where + where_clause_join + where_clause;
-    //}
-    //const query = `select imlgs, ST_AsWKB(geometry) as wkb, facility.facility_code as repository, platform, begin_jd from imlgs ${_where}`;
-    //console.log(query);
-    //const data = await db.ddb.query(query, params);
+    const where_clause = db.getWhereClause(inputs, "geometry is not null");
     const data = await db.select(fields, where_clause);
     const format = new WKB();
     let i = 0;
@@ -439,11 +440,12 @@ map.on('pointermove', function (evt) {
 });
 
 map.on('click', async function (evt) {
-  console.log(`Click ${ evt.originalEvent.target}`);
   const imlgsid = displayFeatureInfo(evt.pixel, evt.originalEvent.target);
   //setSelectedFeature("", "");
   //const res = await getRecord(imlgsdb, imlgsid);
-  //setSelectedFeature(imlgsid, res);
+  console.log(`Select ${ imlgsid }`);
+  //debugger;
+  setSelectedFeature(imlgsid);
 });
 
 map.getTargetElement().addEventListener('pointerleave', function () {
@@ -456,4 +458,16 @@ map.getTargetElement().addEventListener('pointerleave', function () {
     //const res = await getRecord(imlgsdb, _sel);
     //setSelectedFeature(_sel, res);
 //}
+```
+
+```js
+async function loadSampleRecord(imlgs=null) {
+    if (!imlgs) {
+        return html`<p>Waiting for record selection...</p>`;
+    }
+    return imlgs_data.getRecordHtml(imlgs);
+}
+
+view(await loadSampleRecord(selected_feature));
+//view(await loadSampleRecord("imlgs0000009"));
 ```
