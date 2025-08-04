@@ -212,45 +212,7 @@ async function loadSampleRecord(tv) {
     if (!tv) {
         return html`<p>Waiting for record selection...</p>`;
     }
-    const R= await imlgs_data.getRecord(tv.imlgs);
-    return html`<div class="card">
-<table style="width:100%; max-width:100%;">
-<tbody>
-<tr><td>Repository</td><td>${R.facility.facility}</td></tr>
-<tr><td>Ship/Platform</td><td>${R.platform}</td></tr>
-<tr><td>Cruise ID</td><td>${R.cruise.cruise}</td></tr>
-<tr><td>Sample ID</td><td>${R.sample}</td></tr>
-<tr><td>Sampling Device</td><td>${R.device}</td></tr>
-<tr><td>Location</td><td><code>${R.geometry}</code></td></tr>
-<tr><td>Water Depth (m)</td><td>${R.water_depth}</td></tr>
-<tr><td>Date Sample Collected</td><td>${jdToDate(R.begin_jd)}</td></tr>
-<tr><td>Principal Investigator</td><td>${R.pi}</td></tr>
-<tr><td>Physiographic Province</td><td>${R.province}</td></tr>
-<tr><td>Lake</td><td>${R.lake}</td></tr>
-<tr><td>Core Length(cm)</td><td>${R.cored_length}</td></tr>
-<tr><td>Core Diamter(cm)</td><td>${R.cored_diam}</td></tr>
-<tr><td>Sample Comments</td><td>${R.sample_comments}</td></tr>
-<tr><td>Repository Archive Overview</td><td><a target="_blank" href='${R.facility.other_link}'>${R.facility.other_link}</a></td></tr>
-</tbody>
-</table>
-    </div>
-
-    <div class="card">
-<table style="width:100%; max-width:100%;">
-<thead><tr>
-<th>Depth</th><th>Geologic Age</th><th>Texture</th><th>Composition</th><th>Lithology</th><th>Comments</th>
-</tr></thhead>
-<tbody>${Array.from(R.intervals, (interval, i) => html.fragment
-`<tr><td>${interval.depth_top} - ${interval.depth_bot}</td>
-<td>${interval.ages}</td>
-<td>${interval.textures}</td>
-<td>${interval.comps}</td>
-<td>${interval.liths}</td>
-<td>${intervalComment(interval)}</td>
-</tr>`)}
-</tbody></table>
-    </div>
-    `
+    return imlgs_data.getRecordHtml(tv.imlgs);
 }
 
 view(await loadSampleRecord(tableview));

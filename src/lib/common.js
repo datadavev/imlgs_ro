@@ -183,7 +183,7 @@ export class IMLGSData {
         return this.data_view;
     }
     
-    getWhereClause(inputs) {
+    getWhereClause(inputs, where_clause_extra="") {
         const params = [];
         let where_clause = "";
         if (inputs.length > 0) {
@@ -198,6 +198,14 @@ export class IMLGSData {
                 where_clause += ` WHERE ${clauses.join(this.where_clause_join)}`;
             }
         }
+        if (where_clause_extra !== "") {
+            if (where_clause !== "") {
+                where_clause = `${where_clause} ${this.where_clause_join} ${where_clause_extra}`;
+            } else {
+                where_clause = ` WHERE ${where_clause_extra}`;
+            }
+
+        }
         //console.log(`getWhereClause: ${where_clause}`);
         return new WhereClause(where_clause, params);
     }    
@@ -209,47 +217,74 @@ export class IMLGSData {
         return result;
     }
 
+    async columnStats(column, key) {
+        const q = `select '${key}' as k, min(${column}) as min, max(${column}) as max, count(distinct ${column}) as n from ${this.data_view}`;
+        return await this.ddb.queryRow(q);
+}    
+
     async count(where_clause=null) {
         let query = `SELECT count(*) AS n FROM ${this.data_view}`;
+        let params = [];
         if (where_clause !== null) {
             query = query + where_clause.clause;
+            params = where_clause.params;
         }
-        const result = await this.ddb.queryRow(query, where_clause.params);
+        const result = await this.ddb.queryRow(query, params);
         return result.n;
     }
 
     async countDistinct(column, where_clause=null) {
         let query = `SELECT count(distinct ${column}) AS n FROM ${this.data_view}`;
+        let params = [];
         if (where_clause !== null) {
             query = query + where_clause.clause;
+            params = where_clause.params;
         }
-        const result = await this.ddb.queryRow(query, where_clause.params);
+        const result = await this.ddb.queryRow(query, params);
         return result.n;
     }
 
     async distinct(column, where_clause=null) {
         let query = `SELECT distinct ${column} AS d FROM ${this.data_view} order by d`;
+        let params = [];
         if (where_clause !== null) {
             query = query + where_clause.clause;
+            params = where_clause.params;
         }
-        const result = await this.ddb.query(query, where_clause.params);
+        const result = await this.ddb.query(query, params || []);
         return result;
     }
 
     async distinctCounts(column, where_clause=null) {
         let query = `SELECT ${column} AS d, count(*) AS n FROM ${this.data_view} `
+        let params = [];
         if (where_clause !== null) {
             query = query + where_clause.clause;
+            params = where_clause.params;
         }
         query += ` GROUP BY d ORDER BY d`;
-        const result = await this.ddb.query(query, where_clause.params);
+        const result = await this.ddb.query(query, params);
         return result;
     }
 
     async getDisplayRecords(where_clause) {
         let query = `SELECT ${this.display_fields.join(',')} FROM ${this.data_view}`;
-        query = query + where_clause.clause;
-        return this.ddb.query(query, where_clause.params);
+        let params = [];
+        if (where_clause !== null) {
+            query = query + where_clause.clause;
+            params = where_clause.params;
+        }
+        return this.ddb.query(query, params);
+    }
+
+    async select(fields, where_clause) {
+        let query = `SELECT ${fields.join(", ")} FROM ${this.data_view}`;
+        let params = [];
+        if (where_clause !== null) {
+            query = query + where_clause.clause;
+            params = where_clause.params;
+        }
+        return this.ddb.query(query, params);
     }
 
     /**
@@ -321,6 +356,49 @@ export class IMLGSData {
             });
         }
         return jld;
+    }
+
+
+    async getRecordHtml(imlgs) {
+        const R= await this.getRecord(imlgs);
+        return html`<div class="card">
+<table style="width:100%; max-width:100%;">
+<tbody>
+<tr><td>Repository</td><td>${R.facility.facility}</td></tr>
+<tr><td>Ship/Platform</td><td>${R.platform}</td></tr>
+<tr><td>Cruise ID</td><td>${R.cruise.cruise}</td></tr>
+<tr><td>Sample ID</td><td>${R.sample}</td></tr>
+<tr><td>Sampling Device</td><td>${R.device}</td></tr>
+<tr><td>Location</td><td><code>${R.geometry}</code></td></tr>
+<tr><td>Water Depth (m)</td><td>${R.water_depth}</td></tr>
+<tr><td>Date Sample Collected</td><td>${jdToDate(R.begin_jd)}</td></tr>
+<tr><td>Principal Investigator</td><td>${R.pi}</td></tr>
+<tr><td>Physiographic Province</td><td>${R.province}</td></tr>
+<tr><td>Lake</td><td>${R.lake}</td></tr>
+<tr><td>Core Length(cm)</td><td>${R.cored_length}</td></tr>
+<tr><td>Core Diamter(cm)</td><td>${R.cored_diam}</td></tr>
+<tr><td>Sample Comments</td><td>${R.sample_comments}</td></tr>
+<tr><td>Repository Archive Overview</td><td><a target="_blank" href='${R.facility.other_link}'>${R.facility.other_link}</a></td></tr>
+</tbody>
+</table>
+    </div>
+
+    <div class="card">
+<table style="width:100%; max-width:100%;">
+<thead><tr>
+<th>Depth</th><th>Geologic Age</th><th>Texture</th><th>Composition</th><th>Lithology</th><th>Comments</th>
+</tr></thhead>
+<tbody>${Array.from(R.intervals, (interval, i) => html.fragment
+`<tr><td>${interval.depth_top} - ${interval.depth_bot}</td>
+<td>${interval.ages}</td>
+<td>${interval.textures}</td>
+<td>${interval.comps}</td>
+<td>${interval.liths}</td>
+<td>${intervalComment(interval)}</td>
+</tr>`)}
+</tbody></table>
+    </div>
+    `        
     }
 
     async newTextInput(column, label) {
