@@ -23,7 +23,7 @@ to break as content evolves.</div>
 <style>
     .map {
         width: 100%;
-        height: 600px; 
+        height: 800px; 
         position: relative;
     }
     .map:-webkit-full-screen {
@@ -54,165 +54,105 @@ to break as content evolves.</div>
 </style>    
 
 ```js
-/**
- * Initialize a view of the remote data.
- * - create "imlgs" view
- */
-async function setupDatasource(src, src_table) {
-    const db = await DuckDBClient.of();
-    // Spatial extension is loaded from observablehq.config.js
-    //await db.query("install sptial");
-    //await db.query("load spatial");
-    await db.query(`create view ${src_table} as select * from read_parquet('${src}')`);
-    return db;
-}
+import {
+    IMLGSData, 
+    getIdFromURL, 
+    jdToDate,
+    intervalComment
+} from "./lib/common.js";
 
-const source_table = "imlgs";
-const datasource = "https://s3.beehivebeach.com/imlgs/imlgs_full_2.parquet"
-const imlgsdb = await setupDatasource(datasource, source_table);
-
-async function listColumns(db, table) {
-    const q = `select column_name, column_type from (describe ${table})`;
-    const result = await db.query(q);
-    //return Array.from(result, (row) => [row.column_name, row.column_type]);
-    return result;
-}
-
-async function columnStats(db, table, column, key) {
-    const q = `select '${key}' as k, min(${column}) as min, max(${column}) as max, count(distinct ${column}) as n from ${table}`;
-    return await db.queryRow(q);
-}
-
-async function tableSummary(db, table) {
-    const cols = await listColumns(db, table);
-    const results = [];
-    const tasks = [];
-    let i = 0;
-    for (const col of cols) {
-        const row = {
-            "Name": col.column_name,
-            "Type": col.column_type,
-            "Min": null,
-            "Max": null,
-            "n": null
-        }
-        results.push(row);
-        if (["VARCHAR", "INT", "BIGINT"].includes(col.column_type)) {
-            tasks.push(columnStats(db, table, col.column_name, i));
-        }
-        i += 1;
-    }
-    await Promise.all(tasks).then((values) => {
-        for (const row of values) {
-            results[row.k].Min = row.min;
-            results[row.k].Max = row.max;
-            results[row.k].n = row.n;
-        }
-    });
-    return results;
-}
+const pq_source = "https://s3.beehivebeach.com/imlgs/imlgs_full_2.parquet";
+const imlgs_data = new IMLGSData(pq_source, "imlgs");
+console.log("data initialize start")
+await imlgs_data.initialize()
+console.log("data initialize end")
 ```
+<!-- Start of selection boxes -->
+<div class="grid grid-cols-2">
+
+<div class="card">
 
 ```js
-const where_clause_join = " AND ";
+let recordCount = Mutable(0);
 
-const _platform_input = Inputs.text({
-        label:"Platform",
-        submit: true}
-    );
+function setRecordCount(v) {
+    recordCount.value = v;
+}
+
+const [_platform_input, platform_input] = await imlgs_data.newInputObserver(
+    "platform", "Platform", "regexp_matches(platform,?,'i')"
+);
+const [_device_input, device_input] = await imlgs_data.newInputObserver(
+    "device", "Device", "regexp_matches(device,?,'i')"
+);
+const [_repository_input, repository_input] = await imlgs_data.newInputObserver(
+    "facility.facility_code", "Repository", "regexp_matches(facility.facility_code ,?,'i')"
+);
+const [_cruise_input, cruise_input] = await imlgs_data.newTextInputObserver(
+    "cruise.cruise", "Cruise", "cruise.cruise=?"
+);
+
 display(_platform_input);
-
-const _device_input = Inputs.text({
-        label:"Device",
-        submit: true}
-    );
 display(_device_input);
-
-const _repository_input = Inputs.text({
-        label:"Repository",
-        submit: true}
-    );
 display(_repository_input);
+display(_cruise_input);
 
-const platform_input = Generators.observe((notify) => {
-    const inputted = () => notify({"v":_platform_input.value, "c": "regexp_matches(platform,?,'i')"});
-    inputted();
-    _platform_input.addEventListener("input", inputted);
-    return () => _platform_input.removeEventListener("input", inputted);
-})
+const selectedRecordJson = Mutable("");
 
-const device_input = Generators.observe((notify) => {
-    const inputted = () => notify({"v":_device_input.value, "c": "regexp_matches(device,?,'i')"});
-    inputted();
-    _device_input.addEventListener("input", inputted);
-    return () => _device_input.removeEventListener("input", inputted);
-})
+const setSelectedRecordJson =  (v) => {
+    if (!v) {
+        selectedRecordJson.value = "";
+        return;
+    }
+    selectedRecordJson.value = v;
+}
 
-const repository_input = Generators.observe((notify) => {
-    const inputted = () => notify({"v":_repository_input.value, "c": "regexp_matches(facility.facility_code ,?,'i')"});
-    inputted();
-    _repository_input.addEventListener("input", inputted);
-    return () => _repository_input.removeEventListener("input", inputted);
-})
-
+async function updateSelectedRecordJson(pid) {
+    console.log(`Update record: ${pid}`);
+    if (!pid) {
+        setSelectedRecordJson("");
+        return;
+    }
+    const query = `select * from ${imlgs_data.tbl} where imlgs=?`;
+    const res = await imlgs_data.db.queryRow(query, [pid]);
+    setSelectedRecordJson(JSON.stringify(res, null, 2));
+}
 ```
+</div>
+<div class="card">
+Matching: ${recordCount}
+</div>
+</div>
 
 ```js
-function getWhereClause(inputs) {
-    const params = [];
-    let where_clause = "";
-    if (inputs.length > 0) {
-        const clauses = [];
-        for (const inp of inputs) {
-            if (inp.v) {
-                clauses.push(inp.c);
-                params.push(inp.v);
-            }
-        }
-        if (params.length > 0){
-            where_clause += `${clauses.join(where_clause_join)}`;
-        }
-    }
-    return {"params":params, "clause":where_clause};
+const ui_inputs = [];
+
+async function getMatchingRecords(inputs) {
+    const wc = imlgs_data.getWhereClause(inputs);
+    return imlgs_data.getDisplayRecords(wc);
 }
 
-const the_inputs = [platform_input, device_input, repository_input]
+async function getMatchingCount(inputs) {
+    const wc = imlgs_data.getWhereClause(inputs);
+    return imlgs_data.count(wc);
+}
+
+ui_inputs.push(platform_input);
+ui_inputs.push(device_input)
+ui_inputs.push(repository_input);
+ui_inputs.push(cruise_input);
+
+//const inputs = [platform_input, device_input, repository_input]
+//let theRecords = getMatchingRecords(ui_inputs);
+setRecordCount(getMatchingCount(ui_inputs));
 ```
-
-
-```js
-function getIdFromURL() {
-    const hash = window.location.hash;
-    if (hash.length > 0) {
-        return hash.slice(1);
-    }
-    return null;
-}
-
-const record_count = Mutable("loading....");
-
-const setRecordCount = (n) => {
-    record_count.value = n;
-}
-
-const selected_feature = Mutable("");
-const setSelectedFeature = (pid, v) => {
-    selected_feature.value = v;
-    window.location.hash = pid;
-}
-
-```
-
-There are ${record_count} matching records.
+<!-- End of selection boxes -->
 
 <!-- The map container -->
 <div id="olmap" class="map">
     <div id="infooverlay"></div>
 </div>
 
-<pre>
-${selected_feature}
-</pre>
 
 ```js
 // OpenLayers pieces
@@ -312,8 +252,8 @@ const map_data_layers = {
     "samples": null
 };
 async function makeColors(db) {
-    const query = "select distinct facility.facility_code as repository from imlgs";
-    const results = await db.query(query);
+    console.log("makeColors start")
+    const results = await db.distinct("facility.facility_code");
     const data = [[173, 216, 230],
             [0, 191, 255],
             [30, 144, 255],
@@ -352,7 +292,7 @@ async function makeColors(db) {
         const c = data[last_c];
         last_c += 1;
         const _clr = `rgba(${c[0]},${c[1]},${c[2]},0.5)`;
-        color_rules.push(["==",["get","repository"], row.repository]);
+        color_rules.push(["==",["get","repository"], row.d]);
         color_rules.push(_clr)
     }
     color_rules.push("red");
@@ -362,10 +302,11 @@ async function makeColors(db) {
             'circle-stroke-color': 'gray',
             'circle-stroke-width': 0.5
     }
+    console.log("makeColors end")
     return _style;
 }
 
-const repositoryStyle = makeColors(imlgsdb);
+const repositoryStyle = makeColors(imlgs_data);
 ```
 
 ```js
@@ -401,29 +342,27 @@ async function getRecord(db, imlgsid) {
     return JSON.stringify(res, null, 2); 
 }
 
-async function getRecordCount(db, where_clause, params) {
-    //const columns = view(Inputs.table(await tableSummary(imlgsdb, "imlgs")));
-    let query = "select count(*) as n from imlgs";
-    if (where_clause !== "") {
-        query = query + " WHERE " + where_clause;
-    }
-    console.log(query);
-    setRecordCount("...");
-    const res = await db.queryRow(query, params);
-    setRecordCount(res.n);
-}
 
-async function loadParquetLayer(db, where_clause="", params=[]) {
-    const psource = new VectorSource();
-    let _where = " where geometry is not null";
-    if (where_clause !== "") {
-        _where = _where + where_clause_join + where_clause;
-    }
-    const query = `select imlgs, ST_AsWKB(geometry) as wkb, facility.facility_code as repository, platform, begin_jd from imlgs ${_where}`;
-    console.log(query);
-    const data = await db.query(query, params);
+async function loadParquetLayer(db, inputs) {
+    const fields = [
+        "imlgs", 
+        "ST_AsWKB(geometry) as wkb", 
+        "facility.facility_code as repository", 
+        "platform", 
+        "begin_jd"
+    ];
+    const where_clause = db.getWhereClause(inputs)
+    //let _where = " where geometry is not null";
+    //if (where_clause !== "") {
+    //    _where = _where + where_clause_join + where_clause;
+    //}
+    //const query = `select imlgs, ST_AsWKB(geometry) as wkb, facility.facility_code as repository, platform, begin_jd from imlgs ${_where}`;
+    //console.log(query);
+    //const data = await db.ddb.query(query, params);
+    const data = await db.select(fields, where_clause);
     const format = new WKB();
     let i = 0;
+    const psource = new VectorSource();
     for (const row of data) {
         const feature = format.readFeature(row.wkb, {
             dataProjection: 'EPSG:4326',
@@ -445,10 +384,9 @@ async function loadParquetLayer(db, where_clause="", params=[]) {
 
 let selected = null;
 
-const where_clause = getWhereClause(the_inputs);
-getRecordCount(imlgsdb, where_clause.clause, where_clause.params);
-
-loadParquetLayer(imlgsdb, where_clause.clause, where_clause.params).then((pql) => {
+const where_clause = null;
+//getRecordCount(imlgsdb, where_clause.clause, where_clause.params);
+loadParquetLayer(imlgs_data, ui_inputs).then((pql) => {
     //global the_map_layer;
     if (map_data_layers.samples !== null) {
         console.log("remove layer")
@@ -503,9 +441,9 @@ map.on('pointermove', function (evt) {
 map.on('click', async function (evt) {
   console.log(`Click ${ evt.originalEvent.target}`);
   const imlgsid = displayFeatureInfo(evt.pixel, evt.originalEvent.target);
-  setSelectedFeature("", "");
-  const res = await getRecord(imlgsdb, imlgsid);
-  setSelectedFeature(imlgsid, res);
+  //setSelectedFeature("", "");
+  //const res = await getRecord(imlgsdb, imlgsid);
+  //setSelectedFeature(imlgsid, res);
 });
 
 map.getTargetElement().addEventListener('pointerleave', function () {
@@ -513,9 +451,9 @@ map.getTargetElement().addEventListener('pointerleave', function () {
   info.style.visibility = 'hidden';
 });
 
-const _sel = getIdFromURL();
-if (_sel) {
-    const res = await getRecord(imlgsdb, _sel);
-    setSelectedFeature(_sel, res);
-}
+//const _sel = getIdFromURL();
+//if (_sel) {
+    //const res = await getRecord(imlgsdb, _sel);
+    //setSelectedFeature(_sel, res);
+//}
 ```

@@ -209,47 +209,74 @@ export class IMLGSData {
         return result;
     }
 
+    async columnStats(column, key) {
+        const q = `select '${key}' as k, min(${column}) as min, max(${column}) as max, count(distinct ${column}) as n from ${this.data_view}`;
+        return await this.ddb.queryRow(q);
+}    
+
     async count(where_clause=null) {
         let query = `SELECT count(*) AS n FROM ${this.data_view}`;
+        let params = [];
         if (where_clause !== null) {
             query = query + where_clause.clause;
+            params = where_clause.params;
         }
-        const result = await this.ddb.queryRow(query, where_clause.params);
+        const result = await this.ddb.queryRow(query, params);
         return result.n;
     }
 
     async countDistinct(column, where_clause=null) {
         let query = `SELECT count(distinct ${column}) AS n FROM ${this.data_view}`;
+        let params = [];
         if (where_clause !== null) {
             query = query + where_clause.clause;
+            params = where_clause.params;
         }
-        const result = await this.ddb.queryRow(query, where_clause.params);
+        const result = await this.ddb.queryRow(query, params);
         return result.n;
     }
 
     async distinct(column, where_clause=null) {
         let query = `SELECT distinct ${column} AS d FROM ${this.data_view} order by d`;
+        let params = [];
         if (where_clause !== null) {
             query = query + where_clause.clause;
+            params = where_clause.params;
         }
-        const result = await this.ddb.query(query, where_clause.params);
+        const result = await this.ddb.query(query, params || []);
         return result;
     }
 
     async distinctCounts(column, where_clause=null) {
         let query = `SELECT ${column} AS d, count(*) AS n FROM ${this.data_view} `
+        let params = [];
         if (where_clause !== null) {
             query = query + where_clause.clause;
+            params = where_clause.params;
         }
         query += ` GROUP BY d ORDER BY d`;
-        const result = await this.ddb.query(query, where_clause.params);
+        const result = await this.ddb.query(query, params);
         return result;
     }
 
     async getDisplayRecords(where_clause) {
         let query = `SELECT ${this.display_fields.join(',')} FROM ${this.data_view}`;
-        query = query + where_clause.clause;
-        return this.ddb.query(query, where_clause.params);
+        let params = [];
+        if (where_clause !== null) {
+            query = query + where_clause.clause;
+            params = where_clause.params;
+        }
+        return this.ddb.query(query, params);
+    }
+
+    async select(fields, where_clause) {
+        let query = `SELECT ${fields.join(", ")} FROM ${this.data_view}`;
+        let params = [];
+        if (where_clause !== null) {
+            query = query + where_clause.clause;
+            params = where_clause.params;
+        }
+        return this.ddb.query(query, params);
     }
 
     /**
