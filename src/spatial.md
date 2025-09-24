@@ -2,6 +2,9 @@
 title: IMLGS Spatial
 theme: dashboard
 sidebar: collapse
+head: |
+  <link rel=stylesheet href="https://cdn.jsdelivr.net/npm/ol@v10.5.0/ol.css" />
+  <link rel="stylesheet" href="./lib/spatial.css" />
 ---
 
 <h1 style="max-width:100%">Index to Marine and Lacustrine Geological Samples</h1>
@@ -19,39 +22,6 @@ to break as content evolves.</div>
 </details>
 
 
-<link rel=stylesheet href="https://cdn.jsdelivr.net/npm/ol@v10.5.0/ol.css" />
-<style>
-    .map {
-        width: 100%;
-        height: 600px; 
-        position: relative;
-    }
-    .map:-webkit-full-screen {
-        height: 100%;
-        margin: 0;
-    }
-    .map:fullscreen {
-        height: 100%;
-    }
-    #infooverlay {
-        position: absolute;
-        display: inline-block;
-        height: auto;
-        width: auto;
-        z-index: 100;
-        background-color: #333;
-        color: #fff;
-        text-align: center;
-        border-radius: 4px;
-        padding: 5px;
-        left: 50%;
-        transform: translateX(3%);
-        visibility: hidden;
-        pointer-events: none;
-        font-size: 0.8rem;
-        font-family: monospace;
-    }    
-</style>    
 
 ```js
 import {
